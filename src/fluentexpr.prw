@@ -1,41 +1,20 @@
 #include 'protheus.ch'
+#include 'fluentexpr.ch'
 #include 'testsuite.ch'
 
-#xcommand Throw <cMsg> With <aValues> ;
-    => ;
-    __MSG__ := Format( <cMsg>, <aValues> ) ;;
-    aAdd( aTestReport, { .F., __MSG__ } ) ;;
-    UserException( __MSG__ ) ;;
-    Return Self
-
-#xcommand Passed <cMsg> With <aValues> ;
-    => ;
-    __MSG__ := Format( <cMsg>, <aValues> ) ;;
-    aAdd( aTestReport, { .T., __MSG__ } ) ;;
-    Return Self
-
-Static Function Format( cString, aValues )
-    Local cResult := cString
-    Local nIndex
-    For nIndex := 1 To Len( aValues )
-        cResult := StrTran( cResult, '{' + AllTrim( Str( nIndex ) ) + '}', ToString( aValues[ nIndex ] ) )
-    Next
-    Return cResult
-
-Static Function ToString( xValue )
-    Local cType := ValType( xValue )
-    If cType == "A"
-        Return '{ ' + ArrTokStr( xValue, ', ') + ' }'
-    ElseIf cType == "B"
-        Return GetCBSource( xValue )
-    ElseIf cType == "O"
-        Return ArrTokStr( ClassMethArr( xValue, .T. ), ' | ' )
-    EndIf
-    Return cValToChar( xValue )
-
+/**
+ * This class is an assertion library whose expressions
+ * are called by the TestSuite metaclass.
+ *
+ * @class FluentExpr
+ * @author Marcelo Camargo
+ * @since 02/2018
+ **/
 Class FluentExpr
+
     Data xValue
     Data lNot
+
     Method New( xValue ) Constructor
     Method Not()
 
@@ -45,20 +24,42 @@ Class FluentExpr
     Method ToBeAFolder()
     Method ToHaveType( cType )
     Method ToThrowError()
+
 EndClass
 
+/**
+ * @method New
+ * @author Marcelo Camargo
+ * @since 02/2018
+ **/
 Method New( xValue ) Class FluentExpr
+
     ::xValue := xValue
     ::lNot := .F.
+
     Return Self
 
+/**
+ * @method Not
+ * @author Marcelo Camargo
+ * @since 02/2018
+ **/
 Method Not() Class FluentExpr
+
     ::lNot := .T.
+
     Return Self
 
+/**
+ * @method ToBe
+ * @author Marcelo Camargo
+ * @since 02/2018
+ **/
 Method ToBe( xOther ) Class FluentExpr
+
     Local cValue := ToString( ::xValue )
     Local cOther := ToString( xOther )
+
     If ::lNot
         If cValue == cOther
             Throw 'Expected {1} to not be {2}' With { cValue, cOther }
@@ -72,9 +73,16 @@ Method ToBe( xOther ) Class FluentExpr
 
         Passed 'Expected {1} to be {2}' With { cValue, cOther }
     EndIf
+
     Return Self
 
+/**
+ * @method ToBeAFile
+ * @author Marcelo Camargo
+ * @since 02/2018
+ **/
 Method ToBeAFile() Class FluentExpr
+
     Local lIsFile := File( ::xValue )
 
     If ::lNot
@@ -88,26 +96,39 @@ Method ToBeAFile() Class FluentExpr
         EndIf
         Passed 'Expected {1} to be a file' With { ::xValue }
     EndIf
+
     Return Self
 
+/**
+ * @method ToBeAFileWithContents
+ * @author Marcelo Camargo
+ * @since 02/2018
+ **/
 Method ToBeAFileWithContents( cContent ) Class FluentExpr
+
     Local lIsFile := File( ::xValue )
 
     If ::lNot
-        If lIsFile .And. ReadFileContents( ::xValue ) == cContent
+        If lIsFile .And. MemoRead( ::xValue ) == cContent
             Throw 'Expected {1} to not be a file with contents "{2}"' with { ::xValue, cContent }
         EndIf
         Passed 'Expected {1} to not be a file with contents "{2}"' With { ::xValue, cContent }
     Else
-        If !lIsFile .Or. !(ReadFileContents( ::xValue ) == cContent)
+        If !lIsFile .Or. !(MemoRead( ::xValue ) == cContent)
             Throw 'Expected {1} to be a file with contents "{2}"' with { ::xValue, cContent }
         EndIf
         Passed 'Expected {1} to be a file with contents "{2}"' With { ::xValue, cContent }
     EndIf
+
     Return Self
 
-
+/**
+ * @method ToBeAFolder
+ * @author Marcelo Camargo
+ * @since 02/2018
+ **/
 Method ToBeAFolder() Class FluentExpr
+
     Local lIsFolder := ExistDir( ::xValue )
 
     If ::lNot
@@ -121,9 +142,16 @@ Method ToBeAFolder() Class FluentExpr
         EndIf
         Passed 'Expected {1} to be a folder' With { ::xValue }
     EndIf
+
     Return Self
 
+/**
+ * @method ToHaveType
+ * @author Marcelo Camargo
+ * @since 02/2018
+ **/
 Method ToHaveType( cType ) Class FluentExpr
+
     Local cMyType := ValType( ::xValue )
 
     If ::lNot
@@ -137,9 +165,16 @@ Method ToHaveType( cType ) Class FluentExpr
         EndIf
         Passed 'Expected {1} to have type {2}' With { ::xValue, cType }
     EndIf
+
     Return Self
 
+/**
+ * @method ToThrowError
+ * @author Marcelo Camargo
+ * @since 02/2018
+ **/
 Method ToThrowError() Class FluentExpr
+
     Local oError
     Local bError := ErrorBlock( { |oExc| oError := oExc } )
     Local cSource := GetCBSource( ::xValue )
@@ -156,4 +191,40 @@ Method ToThrowError() Class FluentExpr
         Return Self
     EndIf
     aAdd( aTestReport, { .T., 'Expected {1} to throw an error', { cSource } } )
+
     Return Self
+
+/**
+ * @function Format
+ * @author Marcelo Camargo
+ * @since 02/2018
+ **/
+Static Function Format( cString, aValues )
+
+    Local cResult := cString
+    Local nIndex
+
+    For nIndex := 1 To Len( aValues )
+        cResult := StrTran( cResult, '{' + AllTrim( Str( nIndex ) ) + '}', ToString( aValues[ nIndex ] ) )
+    Next
+
+    Return cResult
+
+/**
+ * @function ToString
+ * @author Marcelo Camargo
+ * @since 02/2018
+ **/
+Static Function ToString( xValue )
+
+    Local cType := ValType( xValue )
+
+    If cType == "A"
+        Return '{ ' + ArrTokStr( xValue, ', ') + ' }'
+    ElseIf cType == "B"
+        Return GetCBSource( xValue )
+    ElseIf cType == "O"
+        Return ArrTokStr( ClassMethArr( xValue, .T. ), ' | ' )
+    EndIf
+
+    Return cValToChar( xValue )
