@@ -29,7 +29,6 @@
 #define ANSI_MOVE_CURSOR_TO_HOME Chr( 27 ) + '[H'
 #define ANSI_BEL Chr( 7 )
 #define ANSI_SET_TITLE Chr( 27 ) + ']2;'
-#define ANSI_YELLOW Chr( 27 ) + '[93m'
 #define ANSI_RED Chr( 27 ) + '[91m'
 #define ANSI_RESET Chr( 27 ) + '[0m'
 #define ANSI_BOLD Chr( 27 ) + '[1m'
